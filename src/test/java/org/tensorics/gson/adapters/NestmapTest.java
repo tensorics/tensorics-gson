@@ -14,7 +14,7 @@ import org.tensorics.core.tensorbacked.annotation.Dimensions;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.tensorics.core.lang.Tensorics.at;
 
-public class NestingTest {
+public class NestmapTest {
 
     @Test
     public void nestmapTensorWorks() {

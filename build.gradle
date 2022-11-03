@@ -1,0 +1,126 @@
+buildscript {
+    project.ext['CERN_VM'] = System.getProperty('CERN_TECHNET_VM') ?: System.getenv('CERN_TECHNET_VM') ?: project.hasProperty('CERN_TECHNET_VM') ?: false
+    project.ext['DEPLOYMENT'] = System.getProperty('DEPLOYMENT') ?: false
+
+    repositories {
+        if (project['CERN_VM']) {
+            maven { url 'http://artifactory.cern.ch/ds-jcenter' }
+            maven { url 'http://artifactory.cern.ch/development' }
+            maven { url 'http://artifactory.cern.ch/gradle-plugins' }
+        } else {
+            gradlePluginPortal()
+        }
+    }
+
+    dependencies {
+        classpath 'com.github.jk1:gradle-license-report:1.5'
+        classpath 'io.github.gradle-nexus:publish-plugin:1.0.0'
+        classpath 'biz.aQute.bnd:biz.aQute.bnd.gradle:5.1.2' // OSGi
+        classpath 'biz.aQute.bnd:biz.aQute.bndlib:5.1.2' // OSGi
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'jacoco'
+apply plugin: 'idea'
+apply plugin: 'eclipse'
+apply plugin: 'biz.aQute.bnd.builder' // OSGi
+
+group = project['POM.groupId']
+
+repositories {
+    if (project['CERN_VM']) {
+        maven { url 'http://artifactory.cern.ch/ds-jcenter' }
+        maven { url 'http://artifactory.cern.ch/development' }
+    } else {
+        mavenCentral()
+    }
+}
+
+dependencies {
+    implementation group: 'org.tensorics', name: 'tensorics-core', version: '0.29.0'
+    implementation group: 'com.google.code.gson', name:'gson', version: '2.9.1'
+
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    testCompile group: 'org.assertj', name: 'assertj-core', version: '3.17.2'
+    testCompile group: 'org.mockito', name: 'mockito-core', version: '2.23.0'
+}
+
+wrapper {
+    gradleVersion = '5.4.1'
+    distributionType = Wrapper.DistributionType.ALL
+}
+
+jar {
+    // OSGi
+    bnd([
+            'Bundle-Vendor'  : 'ossgang',
+            '-exportcontents': '*',
+            '-buildpath'     : '' // no dependencies
+    ])
+}
+
+test {
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+}
+
+jacoco {
+    toolVersion = "0.8.3"
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        xml.destination file("$buildDir/reports/jacoco/report.xml")
+        html.enabled true
+        csv.enabled false
+    }
+}
+
+javadoc { options.encoding = "UTF-8" }
+
+if (!project.tasks.findByName("javadocJar")) {
+    task javadocJar(type: Jar) {
+        classifier = 'javadoc'
+        from javadoc
+    }
+}
+
+if (!project.tasks.findByName("sourcesJar")) {
+    task sourcesJar(type: Jar) {
+        classifier = 'sources'
+        from sourceSets.main.allSource
+    }
+}
+
+eclipse {
+    classpath {
+        downloadJavadoc = true
+        downloadSources = true
+    }
+}
+
+idea {
+    module {
+        downloadJavadoc = true
+        downloadSources = true
+    }
+}
+
+if (!project['CERN_VM']) {
+    println 'Applying licensing report'
+    apply plugin: 'com.github.jk1.dependency-license-report'
+
+    licenseReport {
+        renderers = [this.class.classLoader.loadClass('com.github.jk1.license.render.InventoryHtmlReportRenderer').newInstance()]
+        filters = [this.class.classLoader.loadClass('com.github.jk1.license.filter.LicenseBundleNormalizer').newInstance()]
+    }
+}
+
+if (project['DEPLOYMENT']) {
+    println 'Applying deployment scripts'
+    apply from: 'https://raw.githubusercontent.com/ossgang/gradle-scripts/master/deployment/deploy-to-maven-central.gradle'
+}

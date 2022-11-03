@@ -1,9 +1,7 @@
 package org.tensorics.gson.adapters;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.TypeAdapter;
 import com.google.gson.reflect.TypeToken;
@@ -14,7 +12,6 @@ import org.tensorics.core.tensor.Tensor;
 import org.tensorics.core.tensor.operations.TensorInternals;
 import org.tensorics.core.tensorbacked.Tensorbacked;
 import org.tensorics.core.tensorbacked.TensorbackedInternals;
-import org.tensorics.core.tensorbacked.Tensorbackeds;
 
 import java.io.IOException;
 import java.util.List;
@@ -37,7 +34,7 @@ public class TensorbackedGsonAdapter<V, TB extends Tensorbacked<V>> extends Type
         /*XXX: The context of the tensor will currently NOT be serialized! */
 
         List<Class<?>> dimensions = TensorbackedInternals.dimensionListFrom(tensorbackedClass);
-        Object nested = nested(value.tensor(), dimensions);
+        Object nested = nestmap(value.tensor(), dimensions);
         if (nested instanceof Map) {
             TypeAdapter<Map<?, ?>> adapter = context.getAdapter(new TypeToken<Map<?, ?>>() {
             });
@@ -50,9 +47,12 @@ public class TensorbackedGsonAdapter<V, TB extends Tensorbacked<V>> extends Type
     }
 
     @VisibleForTesting
-    static Object nested(Tensor<?> tensor, List<Class<?>> dimensions) {
-        if (Tensorics.dimensionsOf(tensor).size() != dimensions.size()) {
-            throw new IllegalArgumentException("Tensor dimension and provided dimension do not match!");
+    static Object nestmap(Tensor<?> tensor, List<Class<?>> dimensions) {
+        int tensorDimensionality = Tensorics.dimensionsOf(tensor).size();
+        if (tensorDimensionality != dimensions.size()) {
+            throw new IllegalArgumentException("Tensor dimensionality (" + tensorDimensionality +
+                    ") and number of provided dimensions (" + dimensions.size() + ": " + dimensions +
+                    ") do not match!");
         }
 
         if (dimensions.isEmpty()) {
@@ -63,7 +63,7 @@ public class TensorbackedGsonAdapter<V, TB extends Tensorbacked<V>> extends Type
         Tensor<? extends Map<?, ?>> mappedOut = TensorInternals.mapOut(tensor).inDirectionOf(dimension);
 
         List<Class<?>> remainingDimensions = dimensions.subList(0, dimensions.size() - 1);
-        return nested(mappedOut, remainingDimensions);
+        return nestmap(mappedOut, remainingDimensions);
     }
 
     @Override

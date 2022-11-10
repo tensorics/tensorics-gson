@@ -2,10 +2,13 @@ package org.tensorics.gson.adapters;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.TypeAdapter;
+import com.google.gson.TypeAdapterFactory;
 import com.google.gson.internal.JsonReaderInternalAccess;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 import org.tensorics.core.lang.Tensorics;
 import org.tensorics.core.tensor.Position;
@@ -23,6 +26,8 @@ import static java.util.Objects.requireNonNull;
 import static org.tensorics.core.tensorbacked.TensorbackedInternals.valueTypeFrom;
 
 public class TensorbackedGsonAdapter<V, TB extends Tensorbacked<V>> extends TypeAdapter<TB> {
+
+    public static final TypeAdapterFactory FACTORY = new TensorbackedGsonAdapterFactory();
 
     private final Gson context;
     private final Class<TB> tensorbackedClass;
@@ -74,16 +79,30 @@ public class TensorbackedGsonAdapter<V, TB extends Tensorbacked<V>> extends Type
     private <T> Map<T, Object> readMap(JsonReader in, Class<T> keyDim, List<Class<?>> remainingDimensions) throws IOException {
         TypeAdapter<T> dimAdapter = adapterFor(keyDim);
         Map<T, Object> map = new HashMap<>();
-
-        in.beginObject();
-        while (in.hasNext()) {
-            JsonReaderInternalAccess.INSTANCE.promoteNameToValue(in);
-            T key = dimAdapter.read(in);
-            Object value = recursiveRead(in, remainingDimensions);
-            map.put(key, value);
+        JsonToken peek = in.peek();
+        if (peek == JsonToken.BEGIN_ARRAY) {
+            in.beginArray();
+            while (in.hasNext()) {
+                in.beginArray(); // entry array
+                T key = dimAdapter.read(in);
+                Object value = recursiveRead(in, remainingDimensions);
+                Object replaced = map.put(key, value);
+                if (replaced != null) {
+                    throw new JsonSyntaxException("duplicate key: " + key);
+                }
+                in.endArray();
+            }
+            in.endArray();
+        } else {
+            in.beginObject();
+            while (in.hasNext()) {
+                JsonReaderInternalAccess.INSTANCE.promoteNameToValue(in);
+                T key = dimAdapter.read(in);
+                Object value = recursiveRead(in, remainingDimensions);
+                map.put(key, value);
+            }
+            in.endObject();
         }
-        in.endObject();
-
         return map;
     }
 
@@ -92,29 +111,4 @@ public class TensorbackedGsonAdapter<V, TB extends Tensorbacked<V>> extends Type
         return context.getAdapter(TypeToken.get(valueType));
     }
 
-
-    /*
-     JsonToken peek = in.peek();
-      if (peek == JsonToken.NULL) {
-        in.nextNull();
-        return null;
-      }
-
-      Map<K, V> map = constructor.construct();
-
-      if (peek == JsonToken.BEGIN_ARRAY) {
-        in.beginArray();
-        while (in.hasNext()) {
-          in.beginArray(); // entry array
-          K key = keyTypeAdapter.read(in);
-          V value = valueTypeAdapter.read(in);
-          V replaced = map.put(key, value);
-          if (replaced != null) {
-            throw new JsonSyntaxException("duplicate key: " + key);
-          }
-          in.endArray();
-        }
-        in.endArray();
-      }
-     */
 }

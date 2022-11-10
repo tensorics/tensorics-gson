@@ -6,7 +6,7 @@ import com.google.gson.TypeAdapterFactory;
 import com.google.gson.reflect.TypeToken;
 import org.tensorics.core.tensorbacked.Tensorbacked;
 
-public class TensorbackedGsonAdapterFactory implements TypeAdapterFactory {
+class TensorbackedGsonAdapterFactory implements TypeAdapterFactory {
 
 
     @Override

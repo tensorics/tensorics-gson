@@ -85,23 +85,24 @@ public class TensorbackedGsonAdapterTest {
      * number, type AND ORDER. However, the equality between the original and the deserialized object is then
      * not given, as the class of the object is taken into account. This behaviour is considered to be correct.
      */
+    @SuppressWarnings("AssertBetweenInconvertibleTypes")
     @Test
     public void deserializationIntoDifferentTbWorks() {
-        /* This shows cross-deserialization: Into another tensoribacked with the same dimensions.*/
+        /* This shows cross-deserialization: Into another tensorbacked with the same dimensions.*/
         AnInterfaceTensorbacked val = simpleGson.fromJson(JSON_STRING, AnInterfaceTensorbacked.class);
         assertThat(val).isNotNull();
 
         /* The tensorbacked objects are not equal in this case ....*/
         assertThat(val).isNotEqualTo(TENSORBACKED);
 
-        /* However, the underlaying tensors are ...*/
+        /* However, the underlying tensors are ...*/
         assertThat(val.tensor()).isEqualTo(TENSORBACKED.tensor());
     }
 
     /**
      * The context is not serialized or deserialized currently. This is demonstrated here.
      * Can be discussed, if this is good behaviour.... tricky to change anyhow, as the context
-     * dimensions are not well defined by a tensorbacked.
+     * dimensions are not well-defined by a tensorbacked.
      */
     @Test
     public void contextIsNotSerialized() {
@@ -137,9 +138,6 @@ public class TensorbackedGsonAdapterTest {
         String string = complexMapKeyGson.toJson(COMPLEX_COORD_TB);
         System.out.println(string);
         assertThat(string).isEqualTo(COMPLEX_COORD_JSON_STRING);
-
-        /* deserialization works, no matter if the flag is set or not */
-        AComplexCoordTensorbacked deserialized = simpleGson.fromJson(string, AComplexCoordTensorbacked.class);
     }
 
     @Test
@@ -163,16 +161,16 @@ public class TensorbackedGsonAdapterTest {
 
     }
 
-    public static interface AnInterfaceTensorbacked extends Tensorbacked2d<String, Integer, Double> {
+    public interface AnInterfaceTensorbacked extends Tensorbacked2d<String, Integer, Double> {
 
     }
 
-    public static interface AComplexCoordTensorbacked extends Tensorbacked1d<Pair, Double> {
+    public interface AComplexCoordTensorbacked extends Tensorbacked1d<Pair, Double> {
 
     }
 
-    public static enum AB {
-        A, B
+    public enum AB {
+        A
     }
 
     public static class Pair {

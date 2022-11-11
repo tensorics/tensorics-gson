@@ -46,7 +46,6 @@ public class TensorbackedGsonAdapterTest {
             .enableComplexMapKeySerialization() //
             .create();
 
-
     @Test
     public void simpleTensorSerializationIsOk() {
         String string = simpleGson.toJson(TENSORBACKED);
@@ -67,6 +66,7 @@ public class TensorbackedGsonAdapterTest {
         AScalarBacked val = Tensorics.builderForScalar(AScalarBacked.class).put(0.33).build();
 
         String string = simpleGson.toJson(val);
+        System.out.println(string);
         assertThat(string).isNotNull();
         assertThat(string).isNotEmpty();
         assertThat(string).isEqualTo("0.33");
